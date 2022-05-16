@@ -8,11 +8,12 @@ module Make (Src : Action_intf.Ast) (Dst : Action_intf.Ast) = struct
     -> f_string:(dir:Src.path -> Src.string -> Dst.string)
     -> f_path:(dir:Src.path -> Src.path -> Dst.path)
     -> f_target:(dir:Src.path -> Src.target -> Dst.target)
+    -> f_ext:(dir:Src.path -> Src.ext -> Dst.ext)
     -> Dst.t
 
-  let map_one_step f (t : Src.t) ~dir ~f_program ~f_string ~f_path ~f_target :
-      Dst.t =
-    let f t ~dir = f t ~dir ~f_program ~f_string ~f_path ~f_target in
+  let map_one_step f (t : Src.t) ~dir ~f_program ~f_string ~f_path ~f_target
+      ~f_ext : Dst.t =
+    let f t ~dir = f t ~dir ~f_program ~f_string ~f_path ~f_target ~f_ext in
     match t with
     | Run (prog, args) ->
       Run (f_program ~dir prog, List.map args ~f:(f_string ~dir))
@@ -52,10 +53,8 @@ module Make (Src : Action_intf.Ast) (Dst : Action_intf.Ast) = struct
         , f_target ~dir target )
     | No_infer t -> No_infer (f t ~dir)
     | Pipe (outputs, l) -> Pipe (outputs, List.map l ~f:(fun t -> f t ~dir))
-    | Format_dune_file (ver, src, dst) ->
-      Format_dune_file (ver, f_path ~dir src, f_target ~dir dst)
-    | Cram script -> Cram (f_path ~dir script)
+    | Extension ext -> Extension (f_ext ~dir ext)
 
-  let rec map t ~dir ~f_program ~f_string ~f_path ~f_target =
-    map_one_step map t ~dir ~f_program ~f_string ~f_path ~f_target
+  let rec map t ~dir ~f_program ~f_string ~f_path ~f_target ~f_ext =
+    map_one_step map t ~dir ~f_program ~f_string ~f_path ~f_target ~f_ext
 end

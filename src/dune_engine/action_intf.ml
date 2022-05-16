@@ -1,6 +1,23 @@
 open Import
 open Action_types
 
+module Simplified = struct
+  type destination =
+    | Dev_null
+    | File of string
+
+  type source = string
+
+  type t =
+    | Run of string * string list
+    | Chdir of string
+    | Setenv of string * string
+    | Redirect_out of t list * Outputs.t * destination
+    | Redirect_in of t list * Inputs.t * source
+    | Pipe of t list list * Outputs.t
+    | Sh of string
+end
+
 module type Ast = sig
   type program
 
@@ -9,6 +26,8 @@ module type Ast = sig
   type target
 
   type string
+
+  type ext
 
   type t =
     | Run of program * string list
@@ -39,8 +58,7 @@ module type Ast = sig
     | Merge_files_into of path list * string list * target
     | No_infer of t
     | Pipe of Outputs.t * t list
-    | Format_dune_file of Dune_lang.Syntax.Version.t * path * target
-    | Cram of path
+    | Extension of ext
 end
 
 module type Helpers = sig
@@ -99,7 +117,4 @@ module type Helpers = sig
   val mkdir : path -> t
 
   val diff : ?optional:bool -> ?mode:Diff.Mode.t -> path -> target -> t
-
-  val format_dune_file :
-    version:Dune_lang.Syntax.Version.t -> path -> target -> t
 end

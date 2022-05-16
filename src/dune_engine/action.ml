@@ -1,5 +1,6 @@
 open Import
 include Action_types
+module Ext = Action_ext
 
 module Prog = struct
   module Not_found = struct
@@ -44,12 +45,22 @@ module Prog = struct
     | Error e -> Not_found.raise e
 end
 
+module Encode_ext = struct
+  type t =
+    (module Action_ext.Instance
+       with type target = Dpath.Build.t
+        and type path = Dpath.t)
+
+  let encode = Dune_lang.Encoder.unknown
+end
+
 module type Ast =
   Action_intf.Ast
     with type program = Prog.t
     with type path = Path.t
     with type target = Path.Build.t
     with type string = String.t
+     and type ext = Encode_ext.t
 
 module rec Ast : Ast = Ast
 
@@ -59,7 +70,9 @@ module String_with_sexp = struct
   let encode = Dune_lang.Encoder.string
 end
 
-include Action_ast.Make (Prog) (Dpath) (Dpath.Build) (String_with_sexp) (Ast)
+include
+  Action_ast.Make (Prog) (Dpath) (Dpath.Build) (String_with_sexp) (Encode_ext)
+    (Ast)
 
 include Monoid.Make (struct
   type nonrec t = t
@@ -82,19 +95,25 @@ module For_shell = struct
       with type path = string
       with type target = string
       with type string = string
+      with type ext = Dune_lang.t
 
   module rec Ast : Ast = Ast
 
   include
     Action_ast.Make (String_with_sexp) (String_with_sexp) (String_with_sexp)
       (String_with_sexp)
+      (struct
+        type t = Dune_lang.t
+
+        let encode = Dune_lang.Encoder.sexp
+      end)
       (Ast)
 end
 
 module Relativise = Action_mapper.Make (Ast) (For_shell.Ast)
 
 let for_shell t =
-  let rec loop t ~dir ~f_program ~f_string ~f_path ~f_target =
+  let rec loop t ~dir ~f_program ~f_string ~f_path ~f_target ~f_ext =
     match t with
     | Symlink (src, dst) ->
       let src =
@@ -106,11 +125,17 @@ let for_shell t =
       For_shell.Symlink (src, dst)
     | t ->
       Relativise.map_one_step loop t ~dir ~f_program ~f_string ~f_path ~f_target
+        ~f_ext
   in
+  let f_path ~dir x = Path.reach x ~from:dir in
+  let f_target ~dir x = Path.reach (Path.build x) ~from:dir in
   loop t ~dir:Path.root
     ~f_string:(fun ~dir:_ x -> x)
-    ~f_path:(fun ~dir x -> Path.reach x ~from:dir)
-    ~f_target:(fun ~dir x -> Path.reach (Path.build x) ~from:dir)
+    ~f_path ~f_target
+    ~f_ext:(fun ~dir (module A) ->
+      A.Spec.encode A.v
+        (fun p -> Dune_lang.atom_or_quoted_string (f_path p ~dir))
+        (fun p -> Dune_lang.atom_or_quoted_string (f_target p ~dir)))
     ~f_program:(fun ~dir x ->
       match x with
       | Ok p -> Path.reach p ~from:dir
@@ -142,8 +167,7 @@ let fold_one_step t ~init:acc ~f =
   | Mkdir _
   | Diff _
   | Merge_files_into _
-  | Cram _
-  | Format_dune_file _ -> acc
+  | Extension _ -> acc
 
 include Action_mapper.Make (Ast) (Ast)
 
@@ -192,8 +216,7 @@ let rec is_dynamic = function
   | Diff _
   | Mkdir _
   | Merge_files_into _
-  | Cram _
-  | Format_dune_file _ -> false
+  | Extension _ -> false
 
 let maybe_sandbox_path sandbox p =
   match Path.as_in_build_dir p with
@@ -206,6 +229,14 @@ let sandbox t sandbox : t =
     ~f_path:(fun ~dir:_ p -> maybe_sandbox_path sandbox p)
     ~f_target:(fun ~dir:_ p -> Sandbox.map_path sandbox p)
     ~f_program:(fun ~dir:_ p -> Result.map p ~f:(maybe_sandbox_path sandbox))
+    ~f_ext:(fun ~dir:_ (module A) ->
+      let module A = struct
+        include A
+
+        let v =
+          Spec.bimap v (maybe_sandbox_path sandbox) (Sandbox.map_path sandbox)
+      end in
+      (module A))
 
 type is_useful =
   | Clearly_not
@@ -232,11 +263,11 @@ let is_useful_to distribute memoize =
     | Diff _ -> distribute
     | Mkdir _ -> false
     | Merge_files_into _ -> distribute
-    | Cram _ | Run _ -> true
+    | Run _ -> true
     | Dynamic_run _ -> true
     | System _ -> true
     | Bash _ -> true
-    | Format_dune_file _ -> memoize
+    | Extension (module A) -> A.Spec.is_useful_to ~distribute ~memoize
   in
   fun t ->
     match loop t with

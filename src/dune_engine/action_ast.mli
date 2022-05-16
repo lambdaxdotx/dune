@@ -14,11 +14,13 @@ module Make
     (Path : Encoder)
     (Target : Encoder)
     (String : Encoder)
+    (Extension : Encoder)
     (Ast : Action_intf.Ast
              with type program := Program.t
               and type path := Path.t
               and type target := Target.t
-              and type string := String.t) : sig
+              and type string := String.t
+             with type ext := Extension.t) : sig
   include module type of Ast with type t = Ast.t
 
   include Encoder with type t := t

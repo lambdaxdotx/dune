@@ -16,7 +16,6 @@ module Sandbox_mode = Sandbox_mode
 module Process = Process
 module Alias = Alias
 module Foreign_language = Foreign_language
-module Action_exec = Action_exec
 module Source_tree = Source_tree
 module Opam_file = Opam_file
 module Action_dune_lang = Action_dune_lang

@@ -451,7 +451,7 @@ let rec expand (t : Action_dune_lang.t) : Action.t Action_expander.t =
     O.Pipe (outputs, l)
   | Cram script ->
     let+ script = E.dep script in
-    O.Cram script
+    Cram_exec.action script
 
 let expand_no_targets t ~loc ~deps:deps_written_by_user ~expander ~what =
   let open Action_builder.O in
