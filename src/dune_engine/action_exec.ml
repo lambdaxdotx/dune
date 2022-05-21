@@ -271,16 +271,6 @@ let rec exec t ~ectx ~eenv =
   | Hardlink (src, dst) ->
     Io.portable_hardlink ~src ~dst:(Path.build dst);
     Fiber.return Done
-  | Copy_and_add_line_directive (src, dst) ->
-    Io.with_file_in src ~f:(fun ic ->
-        Path.build dst
-        |> Io.with_file_out ~f:(fun oc ->
-               let fn = Path.drop_optional_build_context_maybe_sandboxed src in
-               output_string oc
-                 (Utils.line_directive ~filename:(Path.to_string fn)
-                    ~line_number:1);
-               Io.copy_channels ic oc));
-    Fiber.return Done
   | System cmd ->
     let path, arg =
       Utils.system_shell_exn ~needed_to:"interpret (system ...) actions"

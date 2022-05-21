@@ -158,7 +158,6 @@ let fold_one_step t ~init:acc ~f =
   | Copy _
   | Symlink _
   | Hardlink _
-  | Copy_and_add_line_directive _
   | System _
   | Bash _
   | Write_file _
@@ -209,7 +208,6 @@ let rec is_dynamic = function
   | Copy _
   | Symlink _
   | Hardlink _
-  | Copy_and_add_line_directive _
   | Write_file _
   | Rename _
   | Remove_tree _
@@ -256,7 +254,6 @@ let is_useful_to distribute memoize =
     | Copy _ -> memoize
     | Symlink _ -> false
     | Hardlink _ -> false
-    | Copy_and_add_line_directive _ -> memoize
     | Write_file _ -> distribute
     | Rename _ -> memoize
     | Remove_tree _ -> false

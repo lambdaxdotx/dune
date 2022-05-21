@@ -61,12 +61,6 @@ let simplify act =
     | Symlink (x, y) ->
       Run ("ln", [ "-s"; x; y ]) :: Run ("rm", [ "-f"; y ]) :: acc
     | Hardlink (x, y) -> Run ("ln", [ x; y ]) :: Run ("rm", [ "-f"; y ]) :: acc
-    | Copy_and_add_line_directive (x, y) ->
-      Redirect_out
-        ( echo (Utils.line_directive ~filename:x ~line_number:1) @ [ cat x ]
-        , Stdout
-        , File y )
-      :: acc
     | System x -> Sh x :: acc
     | Bash x -> Run ("bash", [ "-e"; "-u"; "-o"; "pipefail"; "-c"; x ]) :: acc
     | Write_file (x, perm, y) ->

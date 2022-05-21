@@ -47,7 +47,6 @@ module type Ast = sig
     | Copy of path * target
     | Symlink of path * target
     | Hardlink of path * target
-    | Copy_and_add_line_directive of path * target
     | System of string
     | Bash of string
     | Write_file of target * File_perm.t * string
@@ -101,8 +100,6 @@ module type Helpers = sig
   val copy : path -> target -> t
 
   val symlink : path -> target -> t
-
-  val copy_and_add_line_directive : path -> target -> t
 
   val system : string -> t
 

@@ -412,7 +412,7 @@ let rec expand (t : Action_dune_lang.t) : Action.t Action_expander.t =
   | Copy_and_add_line_directive (x, y) ->
     let+ x = E.dep x
     and+ y = E.target y in
-    O.Copy_and_add_line_directive (x, y)
+    Copy_line_directive.action x y
   | System x ->
     let+ x = E.string x in
     O.System x

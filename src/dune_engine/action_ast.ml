@@ -64,8 +64,6 @@ struct
     | Copy (x, y) -> List [ atom "copy"; path x; target y ]
     | Symlink (x, y) -> List [ atom "symlink"; path x; target y ]
     | Hardlink (x, y) -> List [ atom "hardlink"; path x; target y ]
-    | Copy_and_add_line_directive (x, y) ->
-      List [ atom "copy#"; path x; target y ]
     | System x -> List [ atom "system"; string x ]
     | Bash x -> List [ atom "bash"; string x ]
     | Write_file (x, perm, y) ->
@@ -126,8 +124,6 @@ struct
   let copy a b = Copy (a, b)
 
   let symlink a b = Symlink (a, b)
-
-  let copy_and_add_line_directive a b = Copy_and_add_line_directive (a, b)
 
   let system s = System s
 
